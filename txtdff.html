@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text Diff Visualizer</title>
+  <!-- Load lodash from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+      line-height: 1.5;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* Header styles */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .header p {
+      font-size: 16px;
+      color: #6e6e73;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    select, button {
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #d2d2d7;
+      background-color: white;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    
+    select:focus, button:focus {
+      border-color: #0071e3;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+    }
+    
+    button {
+      font-weight: 500;
+    }
+    
+    button.primary {
+      background-color: #f5f5fa;
+      color: #0071e3;
+    }
+    
+    button.primary:hover {
+      background-color: #e8e8ed;
+    }
+    
+    button.secondary {
+      background-color: #f5f5f7;
+      color: #6e6e73;
+    }
+    
+    button.secondary:hover {
+      background-color: #e8e8ed;
+    }
+    
+    /* Input area */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .input-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .input-header h2 {
+      font-size: 16px;
+      font-weight: 500;
+      color: #1d1d1f;
+    }
+    
+    .input-header .char-count {
+      font-size: 12px;
+      color: #6e6e73;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 250px;
+      padding: 16px;
+      font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      background-color: white;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    
+    textarea:focus {
+      border-color: #0071e3;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+    }
+    
+    /* Legend */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+    
+    .legend-color.deleted {
+      background-color: #ffeeee;
+    }
+    
+    .legend-color.added {
+      background-color: #eefff0;
+    }
+    
+    .legend-color.unchanged {
+      background-color: white;
+      border: 1px solid #d2d2d7;
+    }
+    
+    /* Diff visualization */
+    .diff-container {
+      margin-bottom: 24px;
+    }
+    
+    .diff-placeholder {
+      background-color: white;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      color: #6e6e73;
+    }
+    
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .diff-view {
+      background-color: white;
+      border-radius: 12px;
+      padding: 24px;
+      font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .diff-unified {
+      background-color: white;
+      border-radius: 12px;
+      padding: 24px;
+      font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .deleted {
+      background-color: #ffeeee;
+      color: #d63031;
+    }
+    
+    .inserted {
+      background-color: #eefff0;
+      color: #00b894;
+    }
+    
+    .unchanged {
+      background-color: transparent;
+    }
+    
+    /* Stats */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 24px;
+      font-size: 14px;
+      color: #6e6e73;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+    }
+    
+    .stat-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .stat-color.unchanged {
+      background-color: #4299e1;
+    }
+    
+    .stat-color.added {
+      background-color: #48bb78;
+    }
+    
+    .stat-color.deleted {
+      background-color: #f56565;
+    }
+    
+    .stat-color.changed {
+      background-color: #9f7aea;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 12px;
+      color: #6e6e73;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .input-grid, .diff-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .controls {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      
+      .controls-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .stats {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>Text Diff Visualizer</h1>
+      <p>Compare original text with AI-enhanced versions. See what's been added, removed, or kept the same.</p>
+    </header>
+    
+    <!-- Controls -->
+    <div class="controls">
+      <div class="controls-group">
+        <select id="view-mode">
+          <option value="side-by-side">Side by Side</option>
+          <option value="unified">Unified View</option>
+        </select>
+        
+        <select id="diff-level">
+          <option value="word">Word Level</option>
+          <option value="character">Character Level</option>
+        </select>
+      </div>
+      
+      <div class="controls-group">
+        <button id="load-examples" class="primary">Load Examples</button>
+        <button id="clear-all" class="secondary">Clear All</button>
+      </div>
+    </div>
+    
+    <!-- Input Area -->
+    <div class="input-grid">
+      <div>
+        <div class="input-header">
+          <h2>Original Text</h2>
+          <div id="original-count" class="char-count">0 characters</div>
+        </div>
+        <textarea id="original-text" placeholder="Paste your original text here..."></textarea>
+      </div>
+      
+      <div>
+        <div class="input-header">
+          <h2>AI-Enhanced Text</h2>
+          <div id="ai-count" class="char-count">0 characters</div>
+        </div>
+        <textarea id="ai-text" placeholder="Paste your AI-enhanced text here..."></textarea>
+      </div>
+    </div>
+    
+    <!-- Legend (will show when there are diffs) -->
+    <div id="legend" class="legend" style="display: none;">
+      <div class="legend-item">
+        <div class="legend-color deleted"></div>
+        <span>Deleted</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color added"></div>
+        <span>Added</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color unchanged"></div>
+        <span>Unchanged</span>
+      </div>
+    </div>
+    
+    <!-- Diff Visualization -->
+    <div class="diff-container">
+      <div id="diff-placeholder" class="diff-placeholder">
+        Enter text in both fields to see the difference
+      </div>
+      
+      <div id="diff-side-by-side" class="diff-grid" style="display: none;">
+        <div id="original-diff" class="diff-view"></div>
+        <div id="ai-diff" class="diff-view"></div>
+      </div>
+      
+      <div id="diff-unified" class="diff-unified" style="display: none;"></div>
+    </div>
+    
+    <!-- Stats (will show when there are diffs) -->
+    <div id="stats" class="stats" style="display: none;"></div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+      Text Diff Visualizer • Compare texts with confidence
+    </footer>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Elements
+      const originalTextarea = document.getElementById('original-text');
+      const aiTextarea = document.getElementById('ai-text');
+      const originalCount = document.getElementById('original-count');
+      const aiCount = document.getElementById('ai-count');
+      const viewModeSelect = document.getElementById('view-mode');
+      const diffLevelSelect = document.getElementById('diff-level');
+      const loadExamplesBtn = document.getElementById('load-examples');
+      const clearAllBtn = document.getElementById('clear-all');
+      const legend = document.getElementById('legend');
+      const diffPlaceholder = document.getElementById('diff-placeholder');
+      const diffSideBySide = document.getElementById('diff-side-by-side');
+      const diffUnified = document.getElementById('diff-unified');
+      const originalDiff = document.getElementById('original-diff');
+      const aiDiff = document.getElementById('ai-diff');
+      const stats = document.getElementById('stats');
+      
+      // App state
+      let state = {
+        originalText: '',
+        aiText: '',
+        diffResult: [],
+        viewMode: 'side-by-side',
+        diffLevel: 'word'
+      };
+      
+      // Example texts
+      const exampleOriginal = "This is the original text. It contains some information that might be rewritten or improved by an AI system. Some sentences might remain the same, while others could be significantly altered.";
+      const exampleAI = "This is the AI-enhanced text. It contains information that has been rewritten and improved by an AI system. Some sentences remain the same, while others have been significantly enhanced for clarity and impact.";
+      
+      // Event Listeners
+      originalTextarea.addEventListener('input', function() {
+        state.originalText = this.value;
+        originalCount.textContent = `${this.value.length} characters`;
+        if (state.originalText && state.aiText) {
+          computeDiff();
+        } else {
+          resetDiffView();
+        }
+      });
+      
+      aiTextarea.addEventListener('input', function() {
+        state.aiText = this.value;
+        aiCount.textContent = `${this.value.length} characters`;
+        if (state.originalText && state.aiText) {
+          computeDiff();
+        } else {
+          resetDiffView();
+        }
+      });
+      
+      viewModeSelect.addEventListener('change', function() {
+        state.viewMode = this.value;
+        if (state.diffResult.length > 0) {
+          renderDiff();
+        }
+      });
+      
+      diffLevelSelect.addEventListener('change', function() {
+        state.diffLevel = this.value;
+        if (state.originalText && state.aiText) {
+          computeDiff();
+        }
+      });
+      
+      loadExamplesBtn.addEventListener('click', function() {
+        originalTextarea.value = exampleOriginal;
+        aiTextarea.value = exampleAI;
+        state.originalText = exampleOriginal;
+        state.aiText = exampleAI;
+        originalCount.textContent = `${exampleOriginal.length} characters`;
+        aiCount.textContent = `${exampleAI.length} characters`;
+        computeDiff();
+      });
+      
+      clearAllBtn.addEventListener('click', function() {
+        originalTextarea.value = '';
+        aiTextarea.value = '';
+        state.originalText = '';
+        state.aiText = '';
+        originalCount.textContent = '0 characters';
+        aiCount.textContent = '0 characters';
+        resetDiffView();
+      });
+      
+      // Compute diff between texts using LCS algorithm
+      function computeDiff() {
+        // Helper function to find longest common subsequence
+        const findLCS = (str1, str2) => {
+          const m = str1.length;
+          const n = str2.length;
+          
+          // Create a table to store the LCS lengths
+          const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+          
+          // Fill the dp table
+          for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+              if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+              } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+              }
+            }
+          }
+          
+          // Backtrack to find the actual LCS and the diff
+          const diff = [];
+          let i = m;
+          let j = n;
+          
+          while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && str1[i - 1] === str2[j - 1]) {
+              // Characters match, part of LCS
+              diff.unshift({ type: 'unchanged', text: str1[i - 1] });
+              i--;
+              j--;
+            } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+              // Addition in str2
+              diff.unshift({ type: 'insertion', text: str2[j - 1] });
+              j--;
+            } else {
+              // Deletion from str1
+              diff.unshift({ type: 'deletion', text: str1[i - 1] });
+              i--;
+            }
+          }
+          
+          return diff;
+        };
+        
+        // Process the text based on diffLevel
+        let originalParts, aiParts;
+        
+        if (state.diffLevel === 'word') {
+          // More robust word tokenization
+          const wordRegex = /(\s+)|([^\s]+)/g;
+          originalParts = [...state.originalText.matchAll(wordRegex)].map(match => match[0]);
+          aiParts = [...state.aiText.matchAll(wordRegex)].map(match => match[0]);
+        } else {
+          // Character level diff
+          originalParts = state.originalText.split('');
+          aiParts = state.aiText.split('');
+        }
+        
+        // Find the diff using LCS
+        const diff = findLCS(originalParts, aiParts);
+        
+        // Process the diff to merge consecutive items of the same type
+        const mergedDiff = [];
+        
+        for (const item of diff) {
+          const lastItem = mergedDiff[mergedDiff.length - 1];
+          
+          if (lastItem && lastItem.type === item.type) {
+            // Merge with previous item of the same type
+            lastItem.text += item.text;
+          } else {
+            // Add as a new item
+            mergedDiff.push({ ...item });
+          }
+        }
+        
+        state.diffResult = mergedDiff;
+        renderDiff();
+      }
+      
+      // Render the diff visualization
+      function renderDiff() {
+        if (state.diffResult.length === 0) {
+          resetDiffView();
+          return;
+        }
+        
+        // Show legend and hide placeholder
+        legend.style.display = 'flex';
+        diffPlaceholder.style.display = 'none';
+        stats.style.display = 'flex';
+        
+        if (state.viewMode === 'side-by-side') {
+          diffSideBySide.style.display = 'grid';
+          diffUnified.style.display = 'none';
+          renderSideBySide();
+        } else {
+          diffSideBySide.style.display = 'none';
+          diffUnified.style.display = 'block';
+          renderUnified();
+        }
+        
+        renderStats();
+      }
+      
+      // Render side-by-side view
+      function renderSideBySide() {
+        // Group diff parts for original and AI texts
+        const originalParts = [];
+        const aiParts = [];
+        
+        state.diffResult.forEach(part => {
+          if (part.type === 'unchanged' || part.type === 'deletion') {
+            originalParts.push(part);
+          }
+          
+          if (part.type === 'unchanged' || part.type === 'insertion') {
+            aiParts.push(part);
+          }
+        });
+        
+        // Render original text
+        originalDiff.innerHTML = '';
+        originalParts.forEach(part => {
+          const span = document.createElement('span');
+          span.textContent = part.text;
+          if (part.type === 'deletion') {
+            span.classList.add('deleted');
+          }
+          originalDiff.appendChild(span);
+        });
+        
+        // Render AI text
+        aiDiff.innerHTML = '';
+        aiParts.forEach(part => {
+          const span = document.createElement('span');
+          span.textContent = part.text;
+          if (part.type === 'insertion') {
+            span.classList.add('inserted');
+          }
+          aiDiff.appendChild(span);
+        });
+      }
+      
+      // Render unified view
+      function renderUnified() {
+        diffUnified.innerHTML = '';
+        state.diffResult.forEach(part => {
+          const span = document.createElement('span');
+          span.textContent = part.text;
+          
+          if (part.type === 'deletion') {
+            span.classList.add('deleted');
+          } else if (part.type === 'insertion') {
+            span.classList.add('inserted');
+          }
+          
+          diffUnified.appendChild(span);
+        });
+      }
+      
+      // Render statistics
+      function renderStats() {
+        const unchanged = state.diffResult.filter(part => part.type === 'unchanged').length;
+        const insertions = state.diffResult.filter(part => part.type === 'insertion').length;
+        const deletions = state.diffResult.filter(part => part.type === 'deletion').length;
+        const total = state.diffResult.length;
+        
+        const unchangedPercent = Math.round((unchanged / total) * 100);
+        const changedPercent = 100 - unchangedPercent;
+        
+        stats.innerHTML = `
+          <div class="stat-item">
+            <div class="stat-color unchanged"></div>
+            <span>${unchangedPercent}% Unchanged</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-color added"></div>
+            <span>${insertions} Additions</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-color deleted"></div>
+            <span>${deletions} Deletions</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-color changed"></div>
+            <span>${changedPercent}% Changed</span>
+          </div>
+        `;
+      }
+      
+      // Reset diff view
+      function resetDiffView() {
+        legend.style.display = 'none';
+        diffPlaceholder.style.display = 'block';
+        diffSideBySide.style.display = 'none';
+        diffUnified.style.display = 'none';
+        stats.style.display = 'none';
+        state.diffResult = [];
+      }
+    });
+  </script>
+</body>
+</html>
