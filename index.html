@@ -139,6 +139,7 @@
       resize: none;
       outline: none;
       transition: border-color 0.2s ease;
+      white-space: pre-wrap;
     }
     
     textarea:focus {
@@ -209,6 +210,8 @@
       font-size: 14px;
       line-height: 1.5;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
     }
     
     .diff-unified {
@@ -219,6 +222,8 @@
       font-size: 14px;
       line-height: 1.5;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
     }
     
     .deleted {
@@ -420,8 +425,8 @@
       };
       
       // Example texts
-      const exampleOriginal = "This is the original text. It contains some information that might be rewritten or improved by an AI system. Some sentences might remain the same, while others could be significantly altered.";
-      const exampleAI = "This is the AI-enhanced text. It contains information that has been rewritten and improved by an AI system. Some sentences remain the same, while others have been significantly enhanced for clarity and impact.";
+      const exampleOriginal = "This is the original text.\nIt contains some information that might be rewritten or improved by an AI system.\n\nSome sentences might remain the same, while others could be significantly altered.";
+      const exampleAI = "This is the AI-enhanced text.\nIt contains information that has been rewritten and improved by an AI system.\n\nSome sentences remain the same, while others have been significantly enhanced for clarity and impact.";
       
       // Event Listeners
       originalTextarea.addEventListener('input', function() {
@@ -528,7 +533,7 @@
         let originalParts, aiParts;
         
         if (state.diffLevel === 'word') {
-          // More robust word tokenization
+          // More robust word tokenization that preserves whitespace including newlines
           const wordRegex = /(\s+)|([^\s]+)/g;
           originalParts = [...state.originalText.matchAll(wordRegex)].map(match => match[0]);
           aiParts = [...state.aiText.matchAll(wordRegex)].map(match => match[0]);
@@ -643,12 +648,26 @@
       
       // Render statistics
       function renderStats() {
-        const unchanged = state.diffResult.filter(part => part.type === 'unchanged').length;
-        const insertions = state.diffResult.filter(part => part.type === 'insertion').length;
-        const deletions = state.diffResult.filter(part => part.type === 'deletion').length;
-        const total = state.diffResult.length;
+        let unchangedChars = 0;
+        let insertionChars = 0;
+        let deletionChars = 0;
+        let totalChars = 0;
         
-        const unchangedPercent = Math.round((unchanged / total) * 100);
+        // Count characters rather than segments for more accurate stats
+        state.diffResult.forEach(part => {
+          const charCount = part.text.length;
+          totalChars += charCount;
+          
+          if (part.type === 'unchanged') {
+            unchangedChars += charCount;
+          } else if (part.type === 'insertion') {
+            insertionChars += charCount;
+          } else if (part.type === 'deletion') {
+            deletionChars += charCount;
+          }
+        });
+        
+        const unchangedPercent = Math.round((unchangedChars / totalChars) * 100);
         const changedPercent = 100 - unchangedPercent;
         
         stats.innerHTML = `
@@ -658,11 +677,11 @@
           </div>
           <div class="stat-item">
             <div class="stat-color added"></div>
-            <span>${insertions} Additions</span>
+            <span>${insertionChars} Chars Added</span>
           </div>
           <div class="stat-item">
             <div class="stat-color deleted"></div>
-            <span>${deletions} Deletions</span>
+            <span>${deletionChars} Chars Deleted</span>
           </div>
           <div class="stat-item">
             <div class="stat-color changed"></div>
