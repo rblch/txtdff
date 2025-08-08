@@ -308,6 +308,56 @@
         flex-wrap: wrap;
       }
     }
+
+    /* Dark mode */
+    body.dark-mode {
+      background-color: #1d1d1f;
+      color: #f5f5f7;
+    }
+
+    body.dark-mode textarea,
+    body.dark-mode .diff-placeholder,
+    body.dark-mode select,
+    body.dark-mode button {
+      background-color: #2c2c2e;
+      color: #f5f5f7;
+      border-color: #3a3a3c;
+    }
+
+    body.dark-mode button.primary {
+      background-color: #1c1c1e;
+      color: #0a84ff;
+    }
+
+    body.dark-mode button.secondary {
+      background-color: #2c2c2e;
+      color: #a1a1a6;
+    }
+
+    body.dark-mode button.primary:hover,
+    body.dark-mode button.secondary:hover {
+      background-color: #3a3a3c;
+    }
+
+    body.dark-mode .header p,
+    body.dark-mode .input-header .char-count,
+    body.dark-mode .diff-placeholder,
+    body.dark-mode .stats {
+      color: #a1a1a6;
+    }
+
+    body.dark-mode .legend-color.unchanged {
+      background-color: #2c2c2e;
+      border-color: #3a3a3c;
+    }
+
+    body.dark-mode .legend-color.deleted {
+      background-color: #442727;
+    }
+
+    body.dark-mode .legend-color.added {
+      background-color: #273c2c;
+    }
   </style>
 </head>
 <body>
@@ -335,6 +385,7 @@
       <div class="controls-group">
         <button id="load-examples" class="primary">Load Examples</button>
         <button id="clear-all" class="secondary">Clear All</button>
+        <button id="toggle-theme" class="secondary">Toggle Theme</button>
       </div>
     </div>
     
@@ -407,6 +458,7 @@
       const diffLevelSelect = document.getElementById('diff-level');
       const loadExamplesBtn = document.getElementById('load-examples');
       const clearAllBtn = document.getElementById('clear-all');
+      const toggleThemeBtn = document.getElementById('toggle-theme');
       const legend = document.getElementById('legend');
       const diffPlaceholder = document.getElementById('diff-placeholder');
       const diffSideBySide = document.getElementById('diff-side-by-side');
@@ -414,6 +466,11 @@
       const originalDiff = document.getElementById('original-diff');
       const aiDiff = document.getElementById('ai-diff');
       const stats = document.getElementById('stats');
+
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+      }
       
       // App state
       let state = {
@@ -481,6 +538,12 @@
         originalCount.textContent = '0 characters';
         aiCount.textContent = '0 characters';
         resetDiffView();
+      });
+
+      toggleThemeBtn.addEventListener('click', function() {
+        document.body.classList.toggle('dark-mode');
+        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
       });
       
       // Compute diff between texts using LCS algorithm
