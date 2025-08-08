@@ -589,7 +589,23 @@
         
         renderStats();
       }
-      
+
+      // Build a document fragment from diff parts to minimize DOM updates
+      function buildDiffFragment(parts) {
+        const fragment = document.createDocumentFragment();
+        parts.forEach(part => {
+          const span = document.createElement('span');
+          span.textContent = part.text;
+          if (part.type === 'deletion') {
+            span.classList.add('deleted');
+          } else if (part.type === 'insertion') {
+            span.classList.add('inserted');
+          }
+          fragment.appendChild(span);
+        });
+        return fragment;
+      }
+
       // Render side-by-side view
       function renderSideBySide() {
         // Group diff parts for original and AI texts
@@ -608,42 +624,17 @@
         
         // Render original text
         originalDiff.innerHTML = '';
-        originalParts.forEach(part => {
-          const span = document.createElement('span');
-          span.textContent = part.text;
-          if (part.type === 'deletion') {
-            span.classList.add('deleted');
-          }
-          originalDiff.appendChild(span);
-        });
-        
+        originalDiff.appendChild(buildDiffFragment(originalParts));
+
         // Render AI text
         aiDiff.innerHTML = '';
-        aiParts.forEach(part => {
-          const span = document.createElement('span');
-          span.textContent = part.text;
-          if (part.type === 'insertion') {
-            span.classList.add('inserted');
-          }
-          aiDiff.appendChild(span);
-        });
+        aiDiff.appendChild(buildDiffFragment(aiParts));
       }
-      
+
       // Render unified view
       function renderUnified() {
         diffUnified.innerHTML = '';
-        state.diffResult.forEach(part => {
-          const span = document.createElement('span');
-          span.textContent = part.text;
-          
-          if (part.type === 'deletion') {
-            span.classList.add('deleted');
-          } else if (part.type === 'insertion') {
-            span.classList.add('inserted');
-          }
-          
-          diffUnified.appendChild(span);
-        });
+        diffUnified.appendChild(buildDiffFragment(state.diffResult));
       }
       
       // Render statistics
