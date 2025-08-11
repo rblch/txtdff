@@ -391,11 +391,6 @@
           <option value="side-by-side">Side by Side</option>
           <option value="unified">Unified View</option>
         </select>
-        
-        <select id="diff-level">
-          <option value="word">Word Level</option>
-          <option value="character">Character Level</option>
-        </select>
       </div>
       
       <div class="controls-group">
@@ -471,7 +466,6 @@
       const originalCount = document.getElementById('original-count');
       const aiCount = document.getElementById('ai-count');
       const viewModeSelect = document.getElementById('view-mode');
-      const diffLevelSelect = document.getElementById('diff-level');
       const loadExamplesBtn = document.getElementById('load-examples');
       const clearAllBtn = document.getElementById('clear-all');
       const toggleThemeBtn = document.getElementById('toggle-theme');
@@ -493,8 +487,7 @@
         originalText: '',
         aiText: '',
         diffResult: [],
-        viewMode: 'side-by-side',
-        diffLevel: 'word'
+        viewMode: 'side-by-side'
       };
       
       // Example texts
@@ -526,13 +519,6 @@
         state.viewMode = this.value;
         if (state.diffResult.length > 0) {
           renderDiff();
-        }
-      });
-      
-      diffLevelSelect.addEventListener('change', function() {
-        state.diffLevel = this.value;
-        if (state.originalText && state.aiText) {
-          computeDiff();
         }
       });
       
@@ -608,19 +594,10 @@
           return diff;
         };
         
-        // Process the text based on diffLevel
-        let originalParts, aiParts;
-        
-        if (state.diffLevel === 'word') {
-          // More robust word tokenization that preserves whitespace including newlines
-          const wordRegex = /(\s+)|([^\s]+)/g;
-          originalParts = [...state.originalText.matchAll(wordRegex)].map(match => match[0]);
-          aiParts = [...state.aiText.matchAll(wordRegex)].map(match => match[0]);
-        } else {
-          // Character level diff
-          originalParts = state.originalText.split('');
-          aiParts = state.aiText.split('');
-        }
+        // Tokenize text by words while preserving whitespace including newlines
+        const wordRegex = /(\s+)|([^\s]+)/g;
+        const originalParts = [...state.originalText.matchAll(wordRegex)].map(match => match[0]);
+        const aiParts = [...state.aiText.matchAll(wordRegex)].map(match => match[0]);
         
         // Find the diff using LCS
         const diff = findLCS(originalParts, aiParts);
